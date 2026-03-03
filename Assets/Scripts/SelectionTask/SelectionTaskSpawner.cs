@@ -6,6 +6,13 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 public class SelectionTaskSpawner : MonoBehaviour
 {
+    public enum TargetDistanceRegion
+    {
+        Near = 0,
+        Mid = 1,
+        Far = 2
+    }
+
     [Header("Task Space (based on paper setups)")]
     [Tooltip("Local-space center offset of the cuboid task space.")]
     public Vector3 taskSpaceOffset = new Vector3(0f, 0f, 0.8f);
@@ -42,6 +49,13 @@ public class SelectionTaskSpawner : MonoBehaviour
     public bool useFixedSeed = true;
 
     public int seed = 2026;
+
+    [Header("Target Distance Control (Fitts Law)")]
+    [Tooltip("用于计算距离分区的 HMD 初始世界坐标。仅使用水平距离 (x,z)，忽略 y。")]
+    public Vector3 hmdInitialWorldPosition = new Vector3(0f, 1f, 0f);
+
+    [Tooltip("按水平距离分位数（等频）划分近/中/远后，目标出现的区域。")]
+    public TargetDistanceRegion targetDistanceRegion = TargetDistanceRegion.Mid;
 
     [Header("Visual")]
     public Color targetColor = new Color(1f, 0.5f, 0f, 1f);
@@ -137,12 +151,96 @@ public class SelectionTaskSpawner : MonoBehaviour
         }
 
         System.Random rng = useFixedSeed ? new System.Random(seed + 1) : new System.Random();
-        int targetIndex = rng.Next(points.Count);
+        int targetIndex = SelectTargetIndexByDistanceRegion(points, rng);
 
         for (int i = 0; i < points.Count; i++)
         {
             bool isTarget = i == targetIndex;
             SpawnSphere(points[i], isTarget, i);
+        }
+    }
+
+    private int SelectTargetIndexByDistanceRegion(List<Vector3> localPointsInCenteredBox, System.Random rng)
+    {
+        if (localPointsInCenteredBox == null || localPointsInCenteredBox.Count == 0)
+        {
+            return -1;
+        }
+
+        List<DistanceEntry> ordered = new List<DistanceEntry>(localPointsInCenteredBox.Count);
+        for (int i = 0; i < localPointsInCenteredBox.Count; i++)
+        {
+            Vector3 worldPos = transform.TransformPoint(taskSpaceOffset + localPointsInCenteredBox[i]);
+            Vector2 d = new Vector2(worldPos.x - hmdInitialWorldPosition.x, worldPos.z - hmdInitialWorldPosition.z);
+            ordered.Add(new DistanceEntry(i, d.magnitude));
+        }
+
+        ordered.Sort((a, b) => a.distance.CompareTo(b.distance));
+
+        SplitThreeQuantileRanges(ordered.Count, out int nearStart, out int nearEnd, out int midStart, out int midEnd, out int farStart, out int farEnd);
+        int selectedRangeStart;
+        int selectedRangeEnd;
+
+        if (targetDistanceRegion == TargetDistanceRegion.Near)
+        {
+            selectedRangeStart = nearStart;
+            selectedRangeEnd = nearEnd;
+        }
+        else if (targetDistanceRegion == TargetDistanceRegion.Mid)
+        {
+            selectedRangeStart = midStart;
+            selectedRangeEnd = midEnd;
+        }
+        else
+        {
+            selectedRangeStart = farStart;
+            selectedRangeEnd = farEnd;
+        }
+
+        if (selectedRangeEnd <= selectedRangeStart)
+        {
+            int fallbackSorted = Mathf.Clamp(ordered.Count / 2, 0, ordered.Count - 1);
+            Debug.LogWarning("[SelectionTaskSpawner] Selected distance region is empty for current sphere count. Falling back to median-distance target.");
+            return ordered[fallbackSorted].index;
+        }
+
+        int sortedPick = rng.Next(selectedRangeStart, selectedRangeEnd);
+        return ordered[sortedPick].index;
+    }
+
+    private static void SplitThreeQuantileRanges(
+        int n,
+        out int nearStart,
+        out int nearEnd,
+        out int midStart,
+        out int midEnd,
+        out int farStart,
+        out int farEnd)
+    {
+        int baseSize = n / 3;
+        int remainder = n % 3;
+
+        int nearCount = baseSize + (remainder > 0 ? 1 : 0);
+        int midCount = baseSize + (remainder > 1 ? 1 : 0);
+        int farCount = n - nearCount - midCount;
+
+        nearStart = 0;
+        nearEnd = nearStart + nearCount; // [nearStart, nearEnd)
+        midStart = nearEnd;
+        midEnd = midStart + midCount;    // [midStart, midEnd)
+        farStart = midEnd;
+        farEnd = farStart + farCount;    // [farStart, farEnd)
+    }
+
+    private readonly struct DistanceEntry
+    {
+        public readonly int index;
+        public readonly float distance;
+
+        public DistanceEntry(int index, float distance)
+        {
+            this.index = index;
+            this.distance = distance;
         }
     }
 

@@ -52,6 +52,9 @@ public class MyGrabManager : MonoBehaviour
     [Tooltip("开启后使用“硬跟随”：每帧直接对齐抓取点，尽量接近子物体效果（拖尾最小）。")]
     public bool directFollowLikeChild = false;
 
+    [Tooltip("是否让被抓取物体跟随手部旋转。关闭后仅跟随位置。")]
+    public bool enableRotationFollow = true;
+
     [Header("Follow Smoothing (anti-jitter)")]
     [Tooltip("位置跟随平滑强度（Hz）。值越大跟手性越强，越小越稳。0 表示不平滑。")]
     [Min(0f)]
@@ -145,15 +148,20 @@ public class MyGrabManager : MonoBehaviour
         if (grabAnchor != null)
             return new Pose(grabAnchor.position, grabAnchor.rotation);
 
-        // grabAnchor 为空时，默认使用两指尖中点作为虚拟锚点位置
+        // grabAnchor 为空时，默认使用两指尖中点 + 指尖平均旋转作为虚拟锚点，
+        // 这样抓取物体不仅跟随位置，也能稳定跟随手部旋转。
         if (thumbTipTransform != null && indexTipTransform != null)
         {
             Vector3 pos = (thumbTipTransform.position + indexTipTransform.position) * 0.5f;
-            return new Pose(pos, transform.rotation);
+            Quaternion rot = Quaternion.Slerp(thumbTipTransform.rotation, indexTipTransform.rotation, 0.5f);
+            return new Pose(pos, rot);
         }
 
         if (thumbTipTransform != null)
             return new Pose(thumbTipTransform.position, thumbTipTransform.rotation);
+
+        if (indexTipTransform != null)
+            return new Pose(indexTipTransform.position, indexTipTransform.rotation);
 
         return new Pose(transform.position, transform.rotation);
     }
@@ -337,14 +345,20 @@ public class MyGrabManager : MonoBehaviour
             _grabbedOriginalInterpolation = g.rb.interpolation;
             if (kinematicFollow)
             {
+                // 先在非 kinematic 状态下清零速度，避免 Unity 警告。
+                if (!g.rb.isKinematic)
+                {
+                    g.rb.velocity = Vector3.zero;
+                    g.rb.angularVelocity = Vector3.zero;
+                }
+
                 g.rb.isKinematic = true;
                 g.rb.interpolation = directFollowLikeChild ? RigidbodyInterpolation.None : RigidbodyInterpolation.Interpolate;
-                g.rb.velocity = Vector3.zero;
-                g.rb.angularVelocity = Vector3.zero;
             }
         }
 
-        if (suctionOnGrab)
+        bool shouldUseSuction = suctionOnGrab && g != null && g.name != "UICanvas";
+        if (shouldUseSuction)
         {
             Quaternion keepRotation = g.transform.rotation;
             if (g.rb != null)
@@ -410,8 +424,12 @@ public class MyGrabManager : MonoBehaviour
 
             if (stopMotion)
             {
-                _grabbed.rb.velocity = Vector3.zero;
-                _grabbed.rb.angularVelocity = Vector3.zero;
+                // kinematic 刚体不支持设置角速度/线速度，避免警告。
+                if (!_grabbed.rb.isKinematic)
+                {
+                    _grabbed.rb.velocity = Vector3.zero;
+                    _grabbed.rb.angularVelocity = Vector3.zero;
+                }
                 _grabbed.rb.Sleep();
             }
             else if (!_grabbed.rb.isKinematic)
@@ -487,7 +505,13 @@ public class MyGrabManager : MonoBehaviour
     
     private Pose GetDesiredGrabPose()
     {
-        return Multiply(GetAnchorPose(), _anchorToObjectOffset);
+        Pose desired = Multiply(GetAnchorPose(), _anchorToObjectOffset);
+        if (!enableRotationFollow && _grabbed != null)
+        {
+            Quaternion keepRot = _grabbed.rb != null ? _grabbed.rb.rotation : _grabbed.transform.rotation;
+            desired.rotation = keepRot;
+        }
+        return desired;
     }
     
     private void FollowGrabbedObjectImmediate(float dt)
