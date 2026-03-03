@@ -1052,15 +1052,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6e54bd377a3b3642b099e6d61772da8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  taskSpaceOffset: {x: 0.216, y: 2.569, z: 0.183}
-  taskSpaceSize: {x: 0.2, y: 0.2, z: 0.2}
+  taskSpaceOffset: {x: 0, y: 2.45, z: 0.35}
+  taskSpaceSize: {x: 0.3, y: 0.3, z: 0.3}
   sphereDiameter: 0.03
   minimumCenterDistance: 0.045
   maxSphereCount: 128
   attemptsPerSample: 30
   generateOnStart: 1
   clearBeforeGenerate: 1
-  useFixedSeed: 1
+  useFixedSeed: 0
   seed: 2026
   hmdInitialWorldPosition: {x: 0, y: 1, z: 0}
   targetDistanceRegion: 2
@@ -1434,7 +1434,7 @@ Transform:
   m_GameObject: {fileID: 651457744}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0000000074506, y: 1.26, z: 0.074}
+  m_LocalPosition: {x: 0, y: 1.26, z: 0.074}
   m_LocalScale: {x: 0.165, y: 0.165, z: 0.165}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -1532,7 +1532,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &715946093
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2019,8 +2019,8 @@ MonoBehaviour:
   suctionOnGrab: 1
   useTipOverlapSignal: 1
   useTipDistanceSignal: 1
-  pinchBeginDistance: 0.028
-  pinchEndDistance: 0.035
+  pinchBeginDistance: 0.01
+  pinchEndDistance: 0.03
   releaseDebounceSeconds: 0.1
   distanceSmoothing: 0.5
   kinematicFollow: 1
@@ -2210,7 +2210,7 @@ Transform:
   m_GameObject: {fileID: 1658446500}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.088616125, y: 1.0428398, z: -0.06310334}
+  m_LocalPosition: {x: 0, y: 1.0428398, z: -0.06310334}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2310,7 +2310,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1668413196}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6868552fdf8d814478776881899cf6ec, type: 3}
   m_Name: 
@@ -2320,11 +2320,11 @@ MonoBehaviour:
   grabManager: {fileID: 1374590015}
   studyController: {fileID: 1668413198}
   currentCondition:
-    handScaleFactor: 1
-    detectRadius: 0.045
-    sphereDiameter: 0.03
-    minimumCenterDistance: 0.045
-    targetDistanceRegion: 1
+    handScaleFactor: 0.75
+    detectRadius: 0.001
+    sphereDiameter: 0.025
+    minimumCenterDistance: 0.04
+    targetDistanceRegion: 2
   regenDelayAfterTrialSeconds: 0.15
   disableStudyControllerWhenActive: 1
   isRunning: 0
