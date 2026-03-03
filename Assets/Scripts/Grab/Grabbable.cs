@@ -9,6 +9,13 @@ public class Grabbable : MonoBehaviour
     [Tooltip("如果你想限制抓取判定用哪个Collider，就填这个；不填则自动找所有Collider。")]
     public Collider[] colliders;
 
+    [Header("Release Behavior")]
+    [Tooltip("松手后将线速度/角速度清零。适合你说的“无重力无碰撞的小球”，避免乱飞。")]
+    public bool stopMotionOnRelease = true;
+
+    [Tooltip("松手后强制刚体保持 Kinematic（完全静止，不受任何物理影响）。")]
+    public bool forceKinematicOnRelease = true;
+
     private void Reset()
     {
         rb = GetComponent<Rigidbody>();

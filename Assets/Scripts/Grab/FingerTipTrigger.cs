@@ -16,6 +16,8 @@ public class FingerTipTrigger : MonoBehaviour
 
     private int _overlapCount = 0;
 
+    public bool IsOverlappingOtherTip => _overlapCount > 0;
+
     private void Reset()
     {
         // 你可以在Inspector里手动设，这里不给默认LayerMask，避免误伤
