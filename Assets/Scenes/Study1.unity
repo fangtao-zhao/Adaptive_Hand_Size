@@ -1053,7 +1053,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   taskSpaceOffset: {x: 0.216, y: 2.569, z: 0.183}
-  taskSpaceSize: {x: 1, y: 1, z: 1}
+  taskSpaceSize: {x: 0.2, y: 0.2, z: 0.2}
   sphereDiameter: 0.03
   minimumCenterDistance: 0.045
   maxSphereCount: 128
@@ -1960,6 +1960,7 @@ Transform:
   - {fileID: 1374590014}
   - {fileID: 642327848}
   - {fileID: 397781409}
+  - {fileID: 1668413197}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1374590013
@@ -2217,6 +2218,117 @@ Transform:
   - {fileID: 651457745}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1668413196
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1668413197}
+  - component: {fileID: 1668413198}
+  - component: {fileID: 1668413199}
+  m_Layer: 0
+  m_Name: Study1Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1668413197
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1668413196}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1022319254}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1668413198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1668413196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c0bc1df5fe20f24887a03cc11b331ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  selectionTaskSpawner: {fileID: 397781410}
+  handSizeController: {fileID: 642327849}
+  grabManager: {fileID: 1374590015}
+  participantId: 1
+  handScaleFactorLevels:
+  - 0.75
+  - 1
+  - 1.25
+  detectRadiusLevels:
+  - 0.035
+  - 0.045
+  - 0.055
+  currentBlockToRun: 5
+  sphereDiameterLevels:
+  - 0.02
+  - 0.03
+  - 0.04
+  minimumCenterDistanceLevels:
+  - 0.035
+  - 0.045
+  - 0.055
+  targetDistanceLevels: 000000000100000002000000
+  autoStartOnPlay: 1
+  disableSpawnerGenerateOnStart: 1
+  interTrialDelaySeconds: 0.25
+  totalBlockCount: 0
+  resolvedBlockOrderPosition: 0
+  currentBlockCondition:
+    handScaleFactor: 0
+    detectRadius: 0
+  totalTrialCount: 0
+  completedTrialCount: 0
+  currentTrialNumber: 0
+  currentCondition:
+    handScaleFactor: 0
+    detectRadius: 0
+    sphereDiameter: 0
+    minimumCenterDistance: 0
+    targetDistanceRegion: 0
+  isStudyRunning: 0
+--- !u!114 &1668413199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1668413196}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6868552fdf8d814478776881899cf6ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  selectionTaskSpawner: {fileID: 397781410}
+  handSizeController: {fileID: 642327849}
+  grabManager: {fileID: 1374590015}
+  studyController: {fileID: 1668413198}
+  currentCondition:
+    handScaleFactor: 1
+    detectRadius: 0.045
+    sphereDiameter: 0.03
+    minimumCenterDistance: 0.045
+    targetDistanceRegion: 1
+  regenDelayAfterTrialSeconds: 0.15
+  disableStudyControllerWhenActive: 1
+  isRunning: 0
+  completedTrialCount: 0
 --- !u!1 &1738876250
 GameObject:
   m_ObjectHideFlags: 0

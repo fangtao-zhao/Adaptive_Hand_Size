@@ -95,8 +95,18 @@ public class SelectionTaskSpawner : MonoBehaviour
     [SerializeField] private int generatedTargetCount = 0;
     [SerializeField] private int generatedDistractorCount = 0;
 
+    public event Action OnTargetDeliveredToArea;
+
+    [Header("Task Completion")]
+    [Tooltip("目标球与该名称的对象接触后，判定任务完成并清空所有生成球。")]
+    public string targetAreaObjectName = "TargetArea";
+
+    [Tooltip("是否启用“目标进入 TargetArea 即结束任务”的规则。")]
+    public bool clearAllWhenTargetTouchesArea = true;
+
     private const string ContainerName = "SelectionTask_Spheres";
     private Transform _container;
+    private bool _taskCompleted;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void EnsureSpawnerInSampleScene()
@@ -143,6 +153,7 @@ public class SelectionTaskSpawner : MonoBehaviour
 
         generatedTargetCount = 0;
         generatedDistractorCount = 0;
+        _taskCompleted = false;
 
         if (points.Count == 0)
         {
@@ -266,6 +277,19 @@ public class SelectionTaskSpawner : MonoBehaviour
         generatedDistractorCount = 0;
     }
 
+    public void NotifyTargetTouchedArea(SelectionTaskSphere sphere, Collider other)
+    {
+        if (!clearAllWhenTargetTouchesArea) return;
+        if (_taskCompleted) return;
+        if (sphere == null || !sphere.isTarget) return;
+        if (other == null) return;
+        if (!IsTargetAreaCollider(other)) return;
+
+        _taskCompleted = true;
+        OnTargetDeliveredToArea?.Invoke();
+        ClearGenerated();
+    }
+
     private void SpawnSphere(Vector3 localPointInCenteredBox, bool isTarget, int index)
     {
         GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -277,6 +301,7 @@ public class SelectionTaskSpawner : MonoBehaviour
 
         var marker = sphere.AddComponent<SelectionTaskSphere>();
         marker.isTarget = isTarget;
+        marker.Initialize(this);
 
         Renderer renderer = sphere.GetComponent<Renderer>();
         if (renderer != null)
@@ -301,6 +326,26 @@ public class SelectionTaskSpawner : MonoBehaviour
         else generatedDistractorCount++;
 
         ConfigureGrabComponents(sphere);
+    }
+
+    private bool IsTargetAreaCollider(Collider other)
+    {
+        if (other == null) return false;
+        if (string.IsNullOrWhiteSpace(targetAreaObjectName)) return false;
+
+        string targetName = targetAreaObjectName.Trim();
+        if (string.Equals(other.gameObject.name, targetName, StringComparison.Ordinal))
+            return true;
+
+        Transform t = other.transform;
+        while (t != null)
+        {
+            if (string.Equals(t.name, targetName, StringComparison.Ordinal))
+                return true;
+            t = t.parent;
+        }
+
+        return false;
     }
 
     private void ConfigureGrabComponents(GameObject sphere)
@@ -556,4 +601,23 @@ public class SelectionTaskSpawner : MonoBehaviour
 public class SelectionTaskSphere : MonoBehaviour
 {
     public bool isTarget = false;
+    private SelectionTaskSpawner _owner;
+
+    public void Initialize(SelectionTaskSpawner owner)
+    {
+        _owner = owner;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!isTarget || _owner == null) return;
+        _owner.NotifyTargetTouchedArea(this, other);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (!isTarget || _owner == null) return;
+        if (collision == null) return;
+        _owner.NotifyTargetTouchedArea(this, collision.collider);
+    }
 }
