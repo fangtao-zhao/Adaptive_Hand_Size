@@ -1063,7 +1063,7 @@ MonoBehaviour:
   useFixedSeed: 0
   seed: 2026
   hmdInitialWorldPosition: {x: 0, y: 1, z: 0}
-  targetDistanceRegion: 2
+  targetDistanceRegion: 0
   targetColor: {r: 1, g: 0.5, b: 0, a: 1}
   distractorColor: {r: 1, g: 1, b: 1, a: 1}
   targetMaterial: {fileID: 0}
@@ -2268,14 +2268,18 @@ MonoBehaviour:
   grabManager: {fileID: 1374590015}
   participantId: 1
   handScaleFactorLevels:
-  - 0.75
   - 1
-  - 1.25
+  - 0.9
+  - 0.8
+  - 0.7
+  - 0.6
   detectRadiusLevels:
-  - 0.035
-  - 0.045
-  - 0.055
-  currentBlockToRun: 5
+  - 0.001
+  - 0.01
+  - 0.02
+  - 0.03
+  - 0.04
+  currentBlockToRun: 23
   sphereDiameterLevels:
   - 0.02
   - 0.03
@@ -2285,6 +2289,7 @@ MonoBehaviour:
   - 0.045
   - 0.055
   targetDistanceLevels: 000000000100000002000000
+  trialRepeatCount: 2
   autoStartOnPlay: 1
   disableSpawnerGenerateOnStart: 1
   interTrialDelaySeconds: 0.25
@@ -2310,7 +2315,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1668413196}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6868552fdf8d814478776881899cf6ec, type: 3}
   m_Name: 
@@ -2321,10 +2326,10 @@ MonoBehaviour:
   studyController: {fileID: 1668413198}
   currentCondition:
     handScaleFactor: 0.75
-    detectRadius: 0.001
-    sphereDiameter: 0.025
-    minimumCenterDistance: 0.04
-    targetDistanceRegion: 2
+    detectRadius: 0.03
+    sphereDiameter: 0.015
+    minimumCenterDistance: 0.025
+    targetDistanceRegion: 1
   regenDelayAfterTrialSeconds: 0.15
   disableStudyControllerWhenActive: 1
   isRunning: 0

@@ -16,7 +16,23 @@ public class StudyController : MonoBehaviour
         Block6 = 6,
         Block7 = 7,
         Block8 = 8,
-        Block9 = 9
+        Block9 = 9,
+        Block10 = 10,
+        Block11 = 11,
+        Block12 = 12,
+        Block13 = 13,
+        Block14 = 14,
+        Block15 = 15,
+        Block16 = 16,
+        Block17 = 17,
+        Block18 = 18,
+        Block19 = 19,
+        Block20 = 20,
+        Block21 = 21,
+        Block22 = 22,
+        Block23 = 23,
+        Block24 = 24,
+        Block25 = 25
     }
 
     [Serializable]
@@ -95,30 +111,34 @@ public class StudyController : MonoBehaviour
     [Tooltip("被试ID（整数）。用于通过 Latin square 映射 block 顺序与 trial 顺序。")]
     public int participantId = 1;
 
-    [Header("Block Variables (3 x 3 = 9 blocks)")]
-    [Tooltip("HandSizeController.ScaleFactor 的3个取值。")]
-    public float[] handScaleFactorLevels = new float[] { 0.75f, 1.0f, 1.25f };
+    [Header("Block Variables (5 x 5 = 25 blocks)")]
+    [Tooltip("HandSizeController.ScaleFactor 的5个取值。")]
+    public float[] handScaleFactorLevels = new float[] { 0.75f, 0.875f, 1.0f, 1.125f, 1.25f };
     
-    [Tooltip("MyGrabManager.detectRadius 的3个取值。")]
-    public float[] detectRadiusLevels = new float[] { 0.035f, 0.045f, 0.055f };
+    [Tooltip("MyGrabManager.detectRadius 的5个取值。")]
+    public float[] detectRadiusLevels = new float[] { 0.03f, 0.035f, 0.045f, 0.055f, 0.065f };
     
     [Tooltip("当前要运行哪个 block（按 participantId 对应的 Latin square 顺序解释）。")]
     public BlockSelection currentBlockToRun = BlockSelection.Block1;
 
-    [Header("Task Variables Inside Each Block (3 x 3 x 3 = 27 trials)")]
+    [Header("Task Variables Inside Each Block (3 x 3 = 9 trials)")]
     [Tooltip("小球大小3个取值（Sphere Diameter）。")]
     public float[] sphereDiameterLevels = new float[] { 0.02f, 0.03f, 0.04f };
 
     [Tooltip("密度变量3个取值（Minimum Center Distance）。")]
     public float[] minimumCenterDistanceLevels = new float[] { 0.035f, 0.045f, 0.055f };
 
-    [Tooltip("目标距离区域3个取值（Target Distance Region）。")]
+    [Tooltip("目标距离区域（Target Distance Region）。用于每个 trial 随机选择。")]
     public SelectionTaskSpawner.TargetDistanceRegion[] targetDistanceLevels = new SelectionTaskSpawner.TargetDistanceRegion[]
     {
         SelectionTaskSpawner.TargetDistanceRegion.Near,
         SelectionTaskSpawner.TargetDistanceRegion.Mid,
         SelectionTaskSpawner.TargetDistanceRegion.Far
     };
+
+    [Tooltip("每个 trial 条件的重复次数。1=不重复，2=每种条件再随机一遍，依此类推。")]
+    [Min(1)]
+    public int trialRepeatCount = 1;
 
     [Header("Run Control")]
     [Tooltip("运行后自动开始实验流程。")]
@@ -141,8 +161,8 @@ public class StudyController : MonoBehaviour
     [SerializeField] private FullTrialCondition currentCondition;
     [SerializeField] private bool isStudyRunning = false;
 
-    private readonly List<BlockCondition> _orderedBlocks = new List<BlockCondition>(9);
-    private readonly List<TaskTrialCondition> _orderedTrials = new List<TaskTrialCondition>(27);
+    private readonly List<BlockCondition> _orderedBlocks = new List<BlockCondition>(25);
+    private readonly List<TaskTrialCondition> _orderedTrials = new List<TaskTrialCondition>(9);
     private Coroutine _advanceCoroutine;
 
     private void Awake()
@@ -278,6 +298,7 @@ public class StudyController : MonoBehaviour
         }
 
         TaskTrialCondition condition = _orderedTrials[trialIndex];
+        condition.targetDistanceRegion = GetRandomTargetDistanceRegion();
         currentCondition = new FullTrialCondition(currentBlockCondition, condition);
         currentTrialNumber = trialIndex + 1;
 
@@ -360,15 +381,21 @@ public class StudyController : MonoBehaviour
             _orderedTrials.Add(baseOrder[idx]);
         }
 
+        int repeat = Mathf.Max(1, trialRepeatCount);
+        for (int r = 1; r < repeat; r++)
+        {
+            _orderedTrials.AddRange(_orderedTrials.GetRange(0, n));
+        }
+
         totalTrialCount = _orderedTrials.Count;
     }
 
     private List<BlockCondition> BuildBaseBlockConditionList()
     {
-        List<BlockCondition> list = new List<BlockCondition>(9);
-        if (!HasExactlyThreeLevels(handScaleFactorLevels) || !HasExactlyThreeLevels(detectRadiusLevels))
+        List<BlockCondition> list = new List<BlockCondition>(25);
+        if (!HasExactlyLevels(handScaleFactorLevels, 5) || !HasExactlyLevels(detectRadiusLevels, 5))
         {
-            Debug.LogError("[StudyController] Block variables must each have exactly 3 levels.");
+            Debug.LogError("[StudyController] Block variables must each have exactly 5 levels.");
             return list;
         }
 
@@ -385,12 +412,12 @@ public class StudyController : MonoBehaviour
 
     private List<TaskTrialCondition> BuildBaseTaskTrialConditionList()
     {
-        List<TaskTrialCondition> list = new List<TaskTrialCondition>(27);
+        List<TaskTrialCondition> list = new List<TaskTrialCondition>(9);
         if (!HasExactlyThreeLevels(sphereDiameterLevels) ||
             !HasExactlyThreeLevels(minimumCenterDistanceLevels) ||
-            !HasExactlyThreeLevels(targetDistanceLevels))
+            !HasAtLeastOneLevel(targetDistanceLevels))
         {
-            Debug.LogError("[StudyController] Task variables must each have exactly 3 levels.");
+            Debug.LogError("[StudyController] Task variables must include 3 diameter levels, 3 distance levels, and at least 1 target distance option.");
             return list;
         }
 
@@ -398,13 +425,10 @@ public class StudyController : MonoBehaviour
         {
             for (int j = 0; j < minimumCenterDistanceLevels.Length; j++)
             {
-                for (int k = 0; k < targetDistanceLevels.Length; k++)
-                {
-                    list.Add(new TaskTrialCondition(
-                        sphereDiameterLevels[i],
-                        minimumCenterDistanceLevels[j],
-                        targetDistanceLevels[k]));
-                }
+                list.Add(new TaskTrialCondition(
+                    sphereDiameterLevels[i],
+                    minimumCenterDistanceLevels[j],
+                    targetDistanceLevels[0]));
             }
         }
 
@@ -450,6 +474,26 @@ public class StudyController : MonoBehaviour
         return levels != null && levels.Length == 3;
     }
 
+    private static bool HasExactlyLevels<T>(T[] levels, int count)
+    {
+        return levels != null && levels.Length == count;
+    }
+
+    private static bool HasAtLeastOneLevel<T>(T[] levels)
+    {
+        return levels != null && levels.Length > 0;
+    }
+
+    private SelectionTaskSpawner.TargetDistanceRegion GetRandomTargetDistanceRegion()
+    {
+        if (!HasAtLeastOneLevel(targetDistanceLevels))
+        {
+            return SelectionTaskSpawner.TargetDistanceRegion.Near;
+        }
+        int index = UnityEngine.Random.Range(0, targetDistanceLevels.Length);
+        return targetDistanceLevels[index];
+    }
+
     private static int Mod(int value, int mod)
     {
         int r = value % mod;
@@ -460,5 +504,6 @@ public class StudyController : MonoBehaviour
     {
         if (participantId <= 0) participantId = 1;
         interTrialDelaySeconds = Mathf.Max(0f, interTrialDelaySeconds);
+        if (trialRepeatCount < 1) trialRepeatCount = 1;
     }
 }
