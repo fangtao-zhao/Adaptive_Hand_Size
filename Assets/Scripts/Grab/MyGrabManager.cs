@@ -618,7 +618,7 @@ public class MyGrabManager : MonoBehaviour
 
     private void OnValidate()
     {
-        detectRadius = Mathf.Max(0.001f, detectRadius);
+        detectRadius = Mathf.Max(0f, detectRadius);
         pinchBeginDistance = Mathf.Max(0.001f, pinchBeginDistance);
         pinchEndDistance = Mathf.Max(pinchBeginDistance + 0.001f, pinchEndDistance);
         releaseDebounceSeconds = Mathf.Max(0f, releaseDebounceSeconds);

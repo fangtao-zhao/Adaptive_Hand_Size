@@ -172,7 +172,7 @@ public class TestController : MonoBehaviour
     {
         regenDelayAfterTrialSeconds = Mathf.Max(0f, regenDelayAfterTrialSeconds);
         currentCondition.handScaleFactor = Mathf.Max(0.001f, currentCondition.handScaleFactor);
-        currentCondition.detectRadius = Mathf.Max(0.001f, currentCondition.detectRadius);
+        currentCondition.detectRadius = Mathf.Max(0f, currentCondition.detectRadius);
         currentCondition.sphereDiameter = Mathf.Max(0.01f, currentCondition.sphereDiameter);
         currentCondition.minimumCenterDistance = Mathf.Max(0.01f, currentCondition.minimumCenterDistance);
     }

@@ -121,12 +121,12 @@ public class StudyController : MonoBehaviour
     [Tooltip("当前要运行哪个 block（按 participantId 对应的 Latin square 顺序解释）。")]
     public BlockSelection currentBlockToRun = BlockSelection.Block1;
 
-    [Header("Task Variables Inside Each Block (3 x 3 = 9 trials)")]
-    [Tooltip("小球大小3个取值（Sphere Diameter）。")]
+    [Header("Task Variables Inside Each Block (Sphere Levels x MinDistanceMultiplier Levels = Trials)")]
+    [Tooltip("小球大小取值（Sphere Diameter）。支持任意数量（至少1个）。")]
     public float[] sphereDiameterLevels = new float[] { 0.02f, 0.03f, 0.04f };
 
-    [Tooltip("密度变量3个取值（Minimum Center Distance）。")]
-    public float[] minimumCenterDistanceLevels = new float[] { 0.035f, 0.045f, 0.055f };
+    [Tooltip("最小中心距相对当前球直径的倍数（Minimum Center Distance Multiplier）。支持任意数量（至少1个）。例如 1.0 表示 1.0d。")]
+    public float[] minimumCenterDistanceMultiplierLevels = new float[] { 1.0f, 1.5f, 2.0f };
 
     [Tooltip("目标距离区域（Target Distance Region）。用于每个 trial 随机选择。")]
     public SelectionTaskSpawner.TargetDistanceRegion[] targetDistanceLevels = new SelectionTaskSpawner.TargetDistanceRegion[]
@@ -162,7 +162,7 @@ public class StudyController : MonoBehaviour
     [SerializeField] private bool isStudyRunning = false;
 
     private readonly List<BlockCondition> _orderedBlocks = new List<BlockCondition>(25);
-    private readonly List<TaskTrialCondition> _orderedTrials = new List<TaskTrialCondition>(9);
+    private readonly List<TaskTrialCondition> _orderedTrials = new List<TaskTrialCondition>(16);
     private Coroutine _advanceCoroutine;
 
     private void Awake()
@@ -412,22 +412,28 @@ public class StudyController : MonoBehaviour
 
     private List<TaskTrialCondition> BuildBaseTaskTrialConditionList()
     {
-        List<TaskTrialCondition> list = new List<TaskTrialCondition>(9);
-        if (!HasExactlyThreeLevels(sphereDiameterLevels) ||
-            !HasExactlyThreeLevels(minimumCenterDistanceLevels) ||
+        int diameterLevelCount = sphereDiameterLevels != null ? sphereDiameterLevels.Length : 0;
+        int minDistMultiplierLevelCount = minimumCenterDistanceMultiplierLevels != null ? minimumCenterDistanceMultiplierLevels.Length : 0;
+        int estimatedCount = Mathf.Max(1, diameterLevelCount * minDistMultiplierLevelCount);
+        List<TaskTrialCondition> list = new List<TaskTrialCondition>(estimatedCount);
+
+        if (!HasAtLeastOneLevel(sphereDiameterLevels) ||
+            !HasAtLeastOneLevel(minimumCenterDistanceMultiplierLevels) ||
             !HasAtLeastOneLevel(targetDistanceLevels))
         {
-            Debug.LogError("[StudyController] Task variables must include 3 diameter levels, 3 distance levels, and at least 1 target distance option.");
+            Debug.LogError("[StudyController] Task variables must include at least 1 diameter level, at least 1 minimum-center-distance multiplier, and at least 1 target distance option.");
             return list;
         }
 
         for (int i = 0; i < sphereDiameterLevels.Length; i++)
         {
-            for (int j = 0; j < minimumCenterDistanceLevels.Length; j++)
+            float diameter = sphereDiameterLevels[i];
+            for (int j = 0; j < minimumCenterDistanceMultiplierLevels.Length; j++)
             {
+                float minCenterDistance = diameter * minimumCenterDistanceMultiplierLevels[j];
                 list.Add(new TaskTrialCondition(
-                    sphereDiameterLevels[i],
-                    minimumCenterDistanceLevels[j],
+                    diameter,
+                    minCenterDistance,
                     targetDistanceLevels[0]));
             }
         }
@@ -467,11 +473,6 @@ public class StudyController : MonoBehaviour
         {
             selectionTaskSpawner.OnTargetDeliveredToArea -= HandleTargetDelivered;
         }
-    }
-
-    private static bool HasExactlyThreeLevels<T>(T[] levels)
-    {
-        return levels != null && levels.Length == 3;
     }
 
     private static bool HasExactlyLevels<T>(T[] levels, int count)

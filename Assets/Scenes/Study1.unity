@@ -153,7 +153,7 @@ Transform:
   m_GameObject: {fileID: 29919285}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0000000042883, y: 0.0000000050168, z: 0.0000000034573}
+  m_LocalPosition: {x: 0.0029, y: 0.0004, z: -0.001}
   m_LocalScale: {x: 0.016067946, y: 0.016067946, z: 0.016067946}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -454,7 +454,7 @@ Transform:
   m_GameObject: {fileID: 179155861}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.0734e-10, y: -4.6665e-11, z: 0.0000000037027}
+  m_LocalPosition: {x: 0.00561, y: -0.00031, z: 0.00061}
   m_LocalScale: {x: 0.013546088, y: 0.013546088, z: 0.013546088}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -2020,7 +2020,7 @@ MonoBehaviour:
   useTipOverlapSignal: 1
   useTipDistanceSignal: 1
   pinchBeginDistance: 0.01
-  pinchEndDistance: 0.03
+  pinchEndDistance: 0.02
   releaseDebounceSeconds: 0.1
   distanceSmoothing: 0.5
   kinematicFollow: 1
@@ -2274,22 +2274,26 @@ MonoBehaviour:
   - 0.7
   - 0.6
   detectRadiusLevels:
-  - 0.001
+  - 0
   - 0.01
   - 0.02
   - 0.03
   - 0.04
-  currentBlockToRun: 23
+  currentBlockToRun: 1
   sphereDiameterLevels:
+  - 0.01
   - 0.02
   - 0.03
   - 0.04
-  minimumCenterDistanceLevels:
-  - 0.035
-  - 0.045
-  - 0.055
+  - 0.05
+  minimumCenterDistanceMultiplierLevels:
+  - 1
+  - 1.25
+  - 1.5
+  - 1.75
+  - 2
   targetDistanceLevels: 000000000100000002000000
-  trialRepeatCount: 2
+  trialRepeatCount: 1
   autoStartOnPlay: 1
   disableSpawnerGenerateOnStart: 1
   interTrialDelaySeconds: 0.25
@@ -2315,7 +2319,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1668413196}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6868552fdf8d814478776881899cf6ec, type: 3}
   m_Name: 
@@ -2325,11 +2329,11 @@ MonoBehaviour:
   grabManager: {fileID: 1374590015}
   studyController: {fileID: 1668413198}
   currentCondition:
-    handScaleFactor: 0.75
-    detectRadius: 0.03
-    sphereDiameter: 0.015
-    minimumCenterDistance: 0.025
-    targetDistanceRegion: 1
+    handScaleFactor: 0.6
+    detectRadius: 0
+    sphereDiameter: 0.01
+    minimumCenterDistance: 0.01
+    targetDistanceRegion: 2
   regenDelayAfterTrialSeconds: 0.15
   disableStudyControllerWhenActive: 1
   isRunning: 0
