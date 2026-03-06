@@ -3,6 +3,27 @@ using UnityEngine.Serialization;
 
 public class MyGrabManager : MonoBehaviour
 {
+    public enum GrabAttemptOutcome
+    {
+        None = 0,
+        Target = 1,
+        Distractor = 2
+    }
+
+    public struct GrabAttemptResult
+    {
+        public float recordedTime;
+        public GrabAttemptOutcome outcome;
+
+        public GrabAttemptResult(float recordedTime, GrabAttemptOutcome outcome)
+        {
+            this.recordedTime = recordedTime;
+            this.outcome = outcome;
+        }
+    }
+
+    public event System.Action<GrabAttemptResult> OnGrabAttemptRecorded;
+
     [Header("Tip Triggers (assign in Inspector)")]
     public FingerTipTrigger thumbTip;
     public FingerTipTrigger indexTip;
@@ -134,6 +155,9 @@ public class MyGrabManager : MonoBehaviour
     private Collider[] _handCollidersCache;
     private Collider[] _grabbedCollidersCache;
     private float _reenableCollisionsAt;
+    private bool _grabAttemptActive;
+    private float _grabAttemptStartTime;
+    private bool _grabAttemptHasSuccessfulGrab;
 
     private Vector3 GetPinchPoint()
     {
@@ -204,6 +228,7 @@ public class MyGrabManager : MonoBehaviour
             {
                 _isPinching = false;
                 Release(instant: true);
+                ResolveGrabAttempt();
             }
             return;
         }
@@ -241,6 +266,7 @@ public class MyGrabManager : MonoBehaviour
                 _isPinching = true;
                 _releaseTimer = 0f;
                 _grabRetryTimer = 0f;
+                BeginGrabAttempt();
                 _pinchStartedNearTarget = HasNearbyGrabbable(GetPinchPoint());
                 TryGrabNearest();
             }
@@ -262,6 +288,7 @@ public class MyGrabManager : MonoBehaviour
             _releaseTimer = 0f;
             _grabRetryTimer = 0f;
             Release(instant: false);
+            ResolveGrabAttempt();
         }
     }
 
@@ -335,6 +362,7 @@ public class MyGrabManager : MonoBehaviour
     private void Grab(Grabbable g)
     {
         _grabbed = g;
+        UpdateGrabAttemptOutcomeByGrabbable(g);
 
         Pose anchorPose = GetAnchorPose();
         Pose objPose;
@@ -446,6 +474,68 @@ public class MyGrabManager : MonoBehaviour
         }
 
         _grabbed = null;
+    }
+
+    private void BeginGrabAttempt()
+    {
+        _grabAttemptActive = true;
+        _grabAttemptStartTime = Time.time;
+        _grabAttemptHasSuccessfulGrab = false;
+    }
+
+    private void UpdateGrabAttemptOutcomeByGrabbable(Grabbable g)
+    {
+        if (!_grabAttemptActive || g == null)
+        {
+            return;
+        }
+
+        GrabAttemptOutcome outcome = DetermineGrabOutcome(g);
+        _grabAttemptHasSuccessfulGrab = true;
+        EmitGrabAttemptRecord(outcome, Time.time);
+    }
+
+    private static GrabAttemptOutcome DetermineGrabOutcome(Grabbable g)
+    {
+        SelectionTaskSphere marker = g.GetComponent<SelectionTaskSphere>();
+        if (marker == null)
+        {
+            marker = g.GetComponentInParent<SelectionTaskSphere>();
+        }
+        if (marker == null)
+        {
+            marker = g.GetComponentInChildren<SelectionTaskSphere>();
+        }
+
+        if (marker == null)
+        {
+            return GrabAttemptOutcome.Distractor;
+        }
+
+        return marker.isTarget ? GrabAttemptOutcome.Target : GrabAttemptOutcome.Distractor;
+    }
+
+    private void ResolveGrabAttempt()
+    {
+        if (!_grabAttemptActive)
+        {
+            return;
+        }
+
+        if (!_grabAttemptHasSuccessfulGrab)
+        {
+            EmitGrabAttemptRecord(GrabAttemptOutcome.None, _grabAttemptStartTime);
+        }
+
+        _grabAttemptActive = false;
+        _grabAttemptStartTime = 0f;
+        _grabAttemptHasSuccessfulGrab = false;
+    }
+
+    private void EmitGrabAttemptRecord(GrabAttemptOutcome outcome, float recordedTime)
+    {
+        GrabAttemptResult result = new GrabAttemptResult(recordedTime, outcome);
+        OnGrabAttemptRecorded?.Invoke(result);
     }
 
     private void UpdateGrabTarget(float dt)

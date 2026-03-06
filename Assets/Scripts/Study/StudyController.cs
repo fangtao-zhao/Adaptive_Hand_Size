@@ -2,38 +2,39 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public class StudyController : MonoBehaviour
 {
-    public enum BlockSelection
+    public struct TrialLifecycleEventData
     {
-        Block1 = 1,
-        Block2 = 2,
-        Block3 = 3,
-        Block4 = 4,
-        Block5 = 5,
-        Block6 = 6,
-        Block7 = 7,
-        Block8 = 8,
-        Block9 = 9,
-        Block10 = 10,
-        Block11 = 11,
-        Block12 = 12,
-        Block13 = 13,
-        Block14 = 14,
-        Block15 = 15,
-        Block16 = 16,
-        Block17 = 17,
-        Block18 = 18,
-        Block19 = 19,
-        Block20 = 20,
-        Block21 = 21,
-        Block22 = 22,
-        Block23 = 23,
-        Block24 = 24,
-        Block25 = 25
+        public int participantId;
+        public int blockOrderPosition;
+        public int totalBlockCount;
+        public int trialNumber;
+        public int totalTrialCount;
+        public FullTrialCondition condition;
+
+        public TrialLifecycleEventData(
+            int participantId,
+            int blockOrderPosition,
+            int totalBlockCount,
+            int trialNumber,
+            int totalTrialCount,
+            FullTrialCondition condition)
+        {
+            this.participantId = participantId;
+            this.blockOrderPosition = blockOrderPosition;
+            this.totalBlockCount = totalBlockCount;
+            this.trialNumber = trialNumber;
+            this.totalTrialCount = totalTrialCount;
+            this.condition = condition;
+        }
     }
+
+    public event Action<TrialLifecycleEventData> OnTrialStarted;
+    public event Action<TrialLifecycleEventData> OnTrialCompleted;
 
     [Serializable]
     public struct BlockCondition
@@ -111,22 +112,24 @@ public class StudyController : MonoBehaviour
     [Tooltip("被试ID（整数）。用于通过 Latin square 映射 block 顺序与 trial 顺序。")]
     public int participantId = 1;
 
-    [Header("Block Variables (5 x 5 = 25 blocks)")]
-    [Tooltip("HandSizeController.ScaleFactor 的5个取值。")]
+    [Header("Block Variables (HandScale Levels x DetectRadius Levels = Blocks)")]
+    [Tooltip("HandSizeController.ScaleFactor 取值。支持任意数量（至少1个）。")]
     public float[] handScaleFactorLevels = new float[] { 0.75f, 0.875f, 1.0f, 1.125f, 1.25f };
     
-    [Tooltip("MyGrabManager.detectRadius 的5个取值。")]
+    [Tooltip("MyGrabManager.detectRadius 取值。支持任意数量（至少1个）。")]
     public float[] detectRadiusLevels = new float[] { 0.03f, 0.035f, 0.045f, 0.055f, 0.065f };
     
-    [Tooltip("当前要运行哪个 block（按 participantId 对应的 Latin square 顺序解释）。")]
-    public BlockSelection currentBlockToRun = BlockSelection.Block1;
+    [FormerlySerializedAs("currentBlockToRun")]
+    [Tooltip("当前要运行第几个 block（1-based，按 participantId 对应的 Latin square 顺序解释）。")]
+    [Min(1)]
+    public int currentBlockOrderPosition = 1;
 
     [Header("Task Variables Inside Each Block (Sphere Levels x MinDistanceMultiplier Levels = Trials)")]
     [Tooltip("小球大小取值（Sphere Diameter）。支持任意数量（至少1个）。")]
-    public float[] sphereDiameterLevels = new float[] { 0.02f, 0.03f, 0.04f };
+    public float[] sphereDiameterLevels = new float[] { 0.01f, 0.02f, 0.03f };
 
     [Tooltip("最小中心距相对当前球直径的倍数（Minimum Center Distance Multiplier）。支持任意数量（至少1个）。例如 1.0 表示 1.0d。")]
-    public float[] minimumCenterDistanceMultiplierLevels = new float[] { 1.0f, 1.5f, 2.0f };
+    public float[] minimumCenterDistanceMultiplierLevels = new float[] { 1.0f, 1.25f, 1.5f };
 
     [Tooltip("目标距离区域（Target Distance Region）。用于每个 trial 随机选择。")]
     public SelectionTaskSpawner.TargetDistanceRegion[] targetDistanceLevels = new SelectionTaskSpawner.TargetDistanceRegion[]
@@ -144,6 +147,12 @@ public class StudyController : MonoBehaviour
     [Tooltip("运行后自动开始实验流程。")]
     public bool autoStartOnPlay = true;
 
+    [Tooltip("开始某个 block 后，是否等待 Start 触发器点击再开始第一个 trial。")]
+    public bool waitForStartTriggerToBeginBlock = true;
+
+    [Tooltip("用于开始 block 的触发器（例如场景中的 Start UI，对象上挂载 ObjectTriggerReceiver）。可留空，运行时自动查找。")]
+    public ObjectTriggerReceiver blockStartTriggerReceiver;
+
     [Tooltip("开始实验时，自动关闭 spawner 自带的 generateOnStart，避免重复生成。")]
     public bool disableSpawnerGenerateOnStart = true;
 
@@ -160,6 +169,7 @@ public class StudyController : MonoBehaviour
     [SerializeField] private int currentTrialNumber = 0;
     [SerializeField] private FullTrialCondition currentCondition;
     [SerializeField] private bool isStudyRunning = false;
+    [SerializeField] private bool isWaitingForBlockStartTrigger = false;
 
     private readonly List<BlockCondition> _orderedBlocks = new List<BlockCondition>(25);
     private readonly List<TaskTrialCondition> _orderedTrials = new List<TaskTrialCondition>(16);
@@ -168,6 +178,10 @@ public class StudyController : MonoBehaviour
     private void Awake()
     {
         ResolveReferencesIfNeeded();
+        if (disableSpawnerGenerateOnStart && selectionTaskSpawner != null)
+        {
+            selectionTaskSpawner.generateOnStart = false;
+        }
         PrepareBlockSequence();
         PrepareTrialSequence();
     }
@@ -208,10 +222,10 @@ public class StudyController : MonoBehaviour
             return;
         }
 
-        int blockIndexOneBased = (int)currentBlockToRun;
+        int blockIndexOneBased = currentBlockOrderPosition;
         if (blockIndexOneBased < 1 || blockIndexOneBased > _orderedBlocks.Count)
         {
-            Debug.LogError($"[StudyController] currentBlockToRun must be within 1~{_orderedBlocks.Count}.");
+            Debug.LogError($"[StudyController] currentBlockOrderPosition must be within 1~{_orderedBlocks.Count}.");
             return;
         }
 
@@ -226,15 +240,25 @@ public class StudyController : MonoBehaviour
 
         completedTrialCount = 0;
         currentTrialNumber = 0;
-        isStudyRunning = true;
+        isStudyRunning = false;
 
-        StartTrialAt(0);
+        if (waitForStartTriggerToBeginBlock)
+        {
+            if (!TryEnterWaitForBlockStartTrigger())
+            {
+                return;
+            }
+            return;
+        }
+
+        BeginCurrentBlockTrials();
     }
 
     [ContextMenu("Stop Study")]
     public void StopStudy()
     {
         isStudyRunning = false;
+        ExitWaitForBlockStartTrigger();
         if (_advanceCoroutine != null)
         {
             StopCoroutine(_advanceCoroutine);
@@ -257,6 +281,15 @@ public class StudyController : MonoBehaviour
     private void HandleTargetDelivered()
     {
         if (!isStudyRunning) return;
+
+        TrialLifecycleEventData completedData = new TrialLifecycleEventData(
+            participantId,
+            resolvedBlockOrderPosition,
+            totalBlockCount,
+            currentTrialNumber,
+            totalTrialCount,
+            currentCondition);
+        OnTrialCompleted?.Invoke(completedData);
 
         completedTrialCount = Mathf.Min(completedTrialCount + 1, totalTrialCount);
         if (completedTrialCount >= totalTrialCount)
@@ -301,6 +334,15 @@ public class StudyController : MonoBehaviour
         condition.targetDistanceRegion = GetRandomTargetDistanceRegion();
         currentCondition = new FullTrialCondition(currentBlockCondition, condition);
         currentTrialNumber = trialIndex + 1;
+
+        TrialLifecycleEventData startedData = new TrialLifecycleEventData(
+            participantId,
+            resolvedBlockOrderPosition,
+            totalBlockCount,
+            currentTrialNumber,
+            totalTrialCount,
+            currentCondition);
+        OnTrialStarted?.Invoke(startedData);
 
         ApplyConditionToSpawner(condition);
         selectionTaskSpawner.Generate();
@@ -392,10 +434,14 @@ public class StudyController : MonoBehaviour
 
     private List<BlockCondition> BuildBaseBlockConditionList()
     {
-        List<BlockCondition> list = new List<BlockCondition>(25);
-        if (!HasExactlyLevels(handScaleFactorLevels, 5) || !HasExactlyLevels(detectRadiusLevels, 5))
+        int handScaleLevelCount = handScaleFactorLevels != null ? handScaleFactorLevels.Length : 0;
+        int detectRadiusLevelCount = detectRadiusLevels != null ? detectRadiusLevels.Length : 0;
+        int estimatedCount = Mathf.Max(1, handScaleLevelCount * detectRadiusLevelCount);
+        List<BlockCondition> list = new List<BlockCondition>(estimatedCount);
+
+        if (!HasAtLeastOneLevel(handScaleFactorLevels) || !HasAtLeastOneLevel(detectRadiusLevels))
         {
-            Debug.LogError("[StudyController] Block variables must each have exactly 5 levels.");
+            Debug.LogError("[StudyController] Block variables must each include at least 1 level.");
             return list;
         }
 
@@ -455,6 +501,10 @@ public class StudyController : MonoBehaviour
         {
             grabManager = FindObjectOfType<MyGrabManager>();
         }
+        if (blockStartTriggerReceiver == null)
+        {
+            blockStartTriggerReceiver = FindObjectOfType<ObjectTriggerReceiver>();
+        }
     }
 
     private void SubscribeSpawnerEvent()
@@ -473,11 +523,55 @@ public class StudyController : MonoBehaviour
         {
             selectionTaskSpawner.OnTargetDeliveredToArea -= HandleTargetDelivered;
         }
+        UnsubscribeBlockStartTriggerEvent();
     }
 
-    private static bool HasExactlyLevels<T>(T[] levels, int count)
+    private bool TryEnterWaitForBlockStartTrigger()
     {
-        return levels != null && levels.Length == count;
+        ResolveReferencesIfNeeded();
+        if (blockStartTriggerReceiver == null)
+        {
+            Debug.LogError("[StudyController] waitForStartTriggerToBeginBlock is enabled, but ObjectTriggerReceiver is not assigned/found.");
+            return false;
+        }
+
+        ExitWaitForBlockStartTrigger();
+        blockStartTriggerReceiver.ResetTriggerState();
+        blockStartTriggerReceiver.FingerTouched += HandleBlockStartTriggerTouched;
+        isWaitingForBlockStartTrigger = true;
+        Debug.Log($"[StudyController] Block {resolvedBlockOrderPosition}/{totalBlockCount} is ready. Waiting for Start trigger touch.");
+        return true;
+    }
+
+    private void ExitWaitForBlockStartTrigger()
+    {
+        isWaitingForBlockStartTrigger = false;
+        UnsubscribeBlockStartTriggerEvent();
+    }
+
+    private void UnsubscribeBlockStartTriggerEvent()
+    {
+        if (blockStartTriggerReceiver != null)
+        {
+            blockStartTriggerReceiver.FingerTouched -= HandleBlockStartTriggerTouched;
+        }
+    }
+
+    private void HandleBlockStartTriggerTouched()
+    {
+        if (!isWaitingForBlockStartTrigger)
+        {
+            return;
+        }
+
+        ExitWaitForBlockStartTrigger();
+        BeginCurrentBlockTrials();
+    }
+
+    private void BeginCurrentBlockTrials()
+    {
+        isStudyRunning = true;
+        StartTrialAt(0);
     }
 
     private static bool HasAtLeastOneLevel<T>(T[] levels)
@@ -504,6 +598,7 @@ public class StudyController : MonoBehaviour
     private void OnValidate()
     {
         if (participantId <= 0) participantId = 1;
+        if (currentBlockOrderPosition < 1) currentBlockOrderPosition = 1;
         interTrialDelaySeconds = Mathf.Max(0f, interTrialDelaySeconds);
         if (trialRepeatCount < 1) trialRepeatCount = 1;
     }

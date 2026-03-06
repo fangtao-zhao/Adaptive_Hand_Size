@@ -430,7 +430,8 @@ public class SelectionTaskSpawner : MonoBehaviour
         System.Random rng = new System.Random(randomSeed);
         List<Vector3> active = new List<Vector3>();
 
-        Vector3 first = RandomPointInBox(size, rng);
+        // Use task-space center as the deterministic seed point.
+        Vector3 first = Vector3.zero;
         AddPoint(first, points, active, grid, occupied, cellSize, gridX, gridY, gridZ);
 
         while (active.Count > 0 && points.Count < maxCount)
