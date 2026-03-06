@@ -2096,7 +2096,7 @@ MonoBehaviour:
   - 0
   - 0.025
   - 0.05
-  currentBlockOrderPosition: 3
+  currentBlockOrderPosition: 7
   sphereDiameterLevels:
   - 0.01
   - 0.02
